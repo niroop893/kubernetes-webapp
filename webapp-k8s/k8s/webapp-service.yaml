@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+  namespace: webapp
+spec:
+  selector:
+    app: webapp
+  type: NodePort  # Changed from ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+      nodePort: 30080  # Add this line

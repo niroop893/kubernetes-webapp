@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Users - WebApp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .navbar h2 {
+            color: #667eea;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .user-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        .user-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-card p {
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .user-email {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .user-date {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+        .stats-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .stats-bar h3 {
+            font-size: 24px;
+        }
+        .error {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f7fafc;
+        }
+        .view-toggle {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h2>🚀 WebApp</h2>
+        <div class="nav-links">
+            <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+            <button onclick="logout()" class="btn btn-primary">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="content">
+            <h1>📊 All Registered Users</h1>
+            
+            <div class="stats-bar">
+                <h3>Total Users: <span id="totalUsers">0</span></h3>
+            </div>
+
+            <div class="view-toggle">
+                <button onclick="showCards()" class="btn btn-primary">Card View</button>
+                <button onclick="showTable()" class="btn btn-secondary">Table View</button>
+                <button onclick="loadUsers()" class="btn btn-primary">🔄 Refresh</button>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="loading" class="loading">Loading users...</div>
+            
+            <!-- Card View -->
+            <div id="usersGrid" class="users-grid" style="display: none;"></div>
+            
+            <!-- Table View -->
+            <div id="usersTable" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentView = 'cards';
+        let usersData = [];
+
+        // Check if user is logged in
+        function checkAuth() {
+            const user = localStorage.getItem('user');
+            if (!user) {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/';
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const usersGrid = document.getElementById('usersGrid');
+            const usersTable = document.getElementById('usersTable');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            usersGrid.style.display = 'none';
+            usersTable.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/users');
+                const data = await response.json();
+
+                if (data.success) {
+                    usersData = data.users;
+                    document.getElementById('totalUsers').textContent = data.users.length;
+                    
+                    if (currentView === 'cards') {
+                        displayUsersCards(data.users);
+                    } else {
+                        displayUsersTable(data.users);
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to load users');
+                }
+            } catch (err) {
+                error.textContent = 'Error loading users: ' + err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Display users as cards
+        function displayUsersCards(users) {
+            const usersGrid = document.getElementById('usersGrid');
+            usersGrid.innerHTML = '';
+            
+            if (users.length === 0) {
+                usersGrid.innerHTML = '<p>No users found</p>';
+                usersGrid.style.display = 'block';
+                return;
+            }
+
+            users.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'user-card';
+                
+                const createdDate = new Date(user.createdAt).toLocaleDateString();
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never';
+                
+                card.innerHTML = `
+                    <h3>👤 ${user.name}</h3>
+                    <span class="user-email">📧 ${user.email}</span>
+                    <p class="user-date">📅 Joined: ${createdDate}</p>
+                    <p class="user-date">🕐 Last Login: ${lastLogin}</p>
+                `;
+                
+                usersGrid.appendChild(card);
+            });
+            
+            usersGrid.style.display = 'grid';
+        }
+
+        // Display users as table
+        function displayUsersTable(users) {
+            const usersTable = document.getElementById('usersTable');
+            
+            if (users.length === 0) {
+                usersTable.innerHTML = '<p>No users found</p>';
+                usersTable.style.display = 'block';
+                return;
+            }
+
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Created At</th>
+                            <th>Last Login</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach((user, index) => {
+                const createdDate = new Date(user.createdAt).toLocaleDateString();
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>👤 ${user.name}</td>
+                        <td>📧 ${user.email}</td>
+                        <td>📅 ${createdDate}</td>
+                        <td>🕐 ${lastLogin}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            usersTable.innerHTML = tableHTML;
+            usersTable.style.display = 'block';
+        }
+
+        // Toggle views
+        function showCards() {
+            currentView = 'cards';
+            displayUsersCards(usersData);
+            document.getElementById('usersTable').style.display = 'none';
+        }
+
+        function showTable() {
+            currentView = 'table';
+            displayUsersTable(usersData);
+            document.getElementById('usersGrid').style.display = 'none';
+        }
+
+        // Initialize
+        if (checkAuth()) {
+            loadUsers();
+        }
+    </script>
+</body>
+</html>
