@@ -33,16 +33,16 @@ async function connectToMongo() {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-    
+
     await client.connect();
     console.log('Connected to MongoDB successfully');
-    
+
     db = client.db(MONGODB_DATABASE);
     usersCollection = db.collection('users');
-    
+
     // Create unique index on email
     await usersCollection.createIndex({ email: 1 }, { unique: true });
-    
+
   } catch (error) {
     console.error('MongoDB connection error:', error);
     setTimeout(connectToMongo, 5000); // Retry after 5 seconds
@@ -65,6 +65,16 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+// Add users page route
+app.get('/users', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'users.html'));
+});
+
+// Add dashboard route
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   if (db) {
@@ -81,25 +91,25 @@ app.post('/api/register', async (req, res) => {
 
     // Validation
     if (!name || !email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'All fields are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
       });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Password must be at least 6 characters' 
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
       });
     }
 
     // Check if user already exists
     const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already registered' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
       });
     }
 
@@ -114,17 +124,17 @@ app.post('/api/register', async (req, res) => {
       createdAt: new Date()
     });
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: 'User registered successfully',
       userId: result.insertedId
     });
 
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });
@@ -136,27 +146,27 @@ app.post('/api/login', async (req, res) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
       });
     }
 
     // Find user
     const user = await usersCollection.findOne({ email });
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid email or password' 
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
       });
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid email or password' 
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
       });
     }
 
@@ -166,8 +176,8 @@ app.post('/api/login', async (req, res) => {
       { $set: { lastLogin: new Date() } }
     );
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       message: 'Login successful',
       user: {
         name: user.name,
@@ -177,29 +187,55 @@ app.post('/api/login', async (req, res) => {
 
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });
 
-// Get all users (for testing - remove in production)
+// Get all users endpoint
 app.get('/api/users', async (req, res) => {
   try {
-    const users = await usersCollection.find({}, { 
-      projection: { password: 0 } 
+    if (!db || !usersCollection) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected'
+      });
+    }
+
+    const users = await usersCollection.find({}, {
+      projection: { password: 0 }
     }).toArray();
-    
-    res.status(200).json({ 
-      success: true, 
-      users 
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users: users
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+});
+
+// Get user count
+app.get('/api/users/count', async (req, res) => {
+  try {
+    const count = await usersCollection.countDocuments();
+    res.status(200).json({
+      success: true,
+      count: count
+    });
+  } catch (error) {
+    console.error('Error counting users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });

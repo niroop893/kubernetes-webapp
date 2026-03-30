@@ -90,14 +90,6 @@
         .link a:hover {
             text-decoration: underline;
         }
-        .welcome {
-            display: none;
-            text-align: center;
-        }
-        .welcome h2 {
-            color: #48bb78;
-            margin-bottom: 10px;
-        }
     </style>
 </head>
 <body>
@@ -117,10 +109,6 @@
         </form>
         <div class="link">
             Don't have an account? <a href="/register">Register here</a>
-        </div>
-        <div id="welcome" class="welcome">
-            <h2>Welcome back!</h2>
-            <p id="welcomeName"></p>
         </div>
     </div>
 
@@ -144,14 +132,17 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Store user data in localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
                     messageDiv.className = 'message success';
-                    messageDiv.textContent = 'Login successful!';
+                    messageDiv.textContent = 'Login successful! Redirecting...';
                     messageDiv.style.display = 'block';
                     
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.querySelector('.link').style.display = 'none';
-                    document.getElementById('welcome').style.display = 'block';
-                    document.getElementById('welcomeName').textContent = `Hello, ${data.user.name}!`;
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
                     
                 } else {
                     messageDiv.className = 'message error';
