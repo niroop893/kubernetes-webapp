@@ -9,3 +9,16 @@ kubectl wait --namespace ingress-nginx \
 
 # 3. Apply your ingress
 kubectl apply -f k8s/webapp-ingress.yaml
+
+kubectl exec -it -n webapp deployment/mongodb -- mongosh -u admin -p password123 --authenticationDatabase admin
+
+# In MongoDB shell:
+use webappdb
+db.persistence_test.insertOne({
+  test: "This should survive restart",
+  timestamp: new Date(),
+  message: "Testing persistence"
+})
+
+db.persistence_test.find()
+exit
